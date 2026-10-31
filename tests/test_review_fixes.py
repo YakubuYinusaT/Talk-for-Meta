@@ -125,7 +125,9 @@ async def test_a_redirect_off_the_listed_hosts_is_not_followed_and_one_within_th
 
 
 def test_recordings_are_limited_to_the_telephony_providers_host_by_default(app):
-    assert app.state.svc.settings.recording_hosts == ("africastalking.com",)
+    assert app.state.svc.settings.recording_hosts == ("africastalking.com", "at-internal.com")
+    # the address a real recording came from on the live number (seen on 8 recordings): its sub-domains are allowed
+    check_recording_address("https://gigantic.keller-shockley.at-internal.com/rec.mp3", app.state.svc.settings.recording_hosts)
     assert Settings(_env_file=None, recording_allowed_hosts=" A.example , .b.example ").recording_hosts == ("a.example", "b.example")
 
 

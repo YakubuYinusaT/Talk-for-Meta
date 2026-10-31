@@ -138,7 +138,7 @@ class Settings(BaseSettings):
     test_caller_numbers: str = "+2348000000001"
     scheduler_enabled: bool = True  # background jobs: the 7 PM merchant report
     scheduler_interval_seconds: int = 60
-    recording_allowed_hosts: str = "africastalking.com"  # a recording is downloaded only from these hosts (and their sub-domains), over https; empty = any (not safe)
+    recording_allowed_hosts: str = "africastalking.com,at-internal.com"  # a recording is downloaded only from these hosts (and their sub-domains), over https; empty = any (not safe)
     recording_retention_days: int = 30   # a caller's recording is deleted this long after the call; 0 keeps recordings
     debug_headers: bool = True  # X-Sofa-* headers used by the call simulator
 
