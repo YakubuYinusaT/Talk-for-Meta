@@ -9,6 +9,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.exceptions import HTTPException
 
 from .config import Settings, get_settings
+from .hardening import replace_known_defaults
 from .container import build_services
 from .db import init_db, make_engine, make_session_factory
 from .routes import admin, demo, hub, overview, pages, provider, vendor, voice, webhooks
@@ -22,6 +23,7 @@ ATTRIBUTION = (
 def create_app(settings: Settings | None = None) -> FastAPI:
     settings = settings or get_settings()
     logging.basicConfig(level=logging.INFO)
+    replace_known_defaults(settings)  # on an https address no secret may still be the one published with the code
     engine = make_engine(settings.database_url)
     init_db(engine)
     svc = build_services(settings, make_session_factory(engine))
@@ -86,9 +88,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     @app.get("/health")
     def health():
+        hosted = settings.tts_provider != "yarngpt"   # the voice callers hear: the hosted one (with or without a back-up on this machine), or the GPU host's
+        voice = f"{settings.tts_provider}, " + ("with a voice on this machine as back-up" if settings.piper_model else "no back-up voice") if hosted else settings.tts_url
         return {"ok": True, "sms": "mock" if settings.sms_is_mock else "live",
                 "paystack": "mock" if settings.paystack_is_mock else "live",
-                "asr": settings.asr_url, "llm": settings.llm_url, "tts": settings.tts_url}
+                "asr": settings.asr_url, "llm": settings.llm_url, "tts": voice, "streamed_calls": settings.sip_enabled}
 
     @app.get("/audio/{name}")
     def audio(name: str):

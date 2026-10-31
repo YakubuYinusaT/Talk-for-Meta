@@ -91,6 +91,9 @@ async def loop(svc) -> None:
     interval = svc.settings.scheduler_interval_seconds
     while True:
         try:
+            from . import retention
+
+            retention.run_if_due(svc)  # recordings past their time are deleted, about once an hour
             texted = await run_due_reports(svc)
             if texted:
                 log.info("daily report sent to: %s", ", ".join(texted))

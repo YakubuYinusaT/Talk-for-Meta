@@ -66,7 +66,7 @@ def demo(request: Request, _=Depends(enabled), db=Depends(db_dep)):
         calls.append({
             "when": c.created_at, "from": mask_phone(c.from_number), "domain": c.service_domain or "front desk", "language": c.language or "",
             "outcome": (c.outcome or "").replace("_", " "),
-            "turns": [{"said": "(typed on the keypad)" if t.asr_model == "keypad" else scrub(t.transcript), "reply": scrub(t.reply_text),
+            "turns": [{"said": ("(typed on the keypad)" if t.asr_model == "keypad" else scrub(t.transcript)) if s.demo_show_calls else "", "reply": scrub(t.reply_text) if s.demo_show_calls else "",
                        "action": (t.action_taken or "").split("|")[0], "ms": (t.latency_ms or {}).get("total")} for t in turns],
         })
     shop = db.scalar(select(func.count(Product.id)))
@@ -76,7 +76,7 @@ def demo(request: Request, _=Depends(enabled), db=Depends(db_dep)):
              "demobank": "A caller speaks; Sofa does the banking, and tells them what it did.",
              "all": "A caller speaks; Sofa does the banking, the shopping or the search, and tells them what it did."}
     return templates.TemplateResponse(request, "demo.html", {
-        "request": request, "brand": "Talk live demo" if side == "health" else "SOFA live demo", "stats": stats, "calls": calls, "refresh": 10, "side": side, "lede": ledes[side],
+        "request": request, "brand": "Talk live demo" if side == "health" else "SOFA live demo", "stats": stats, "calls": calls, "show_calls": s.demo_show_calls, "refresh": 10, "side": side, "lede": ledes[side],
         "footer_kind": {"health": "health", "shop": "shop", "demobank": "demobank", "all": "internal"}[side], "home_url": "/demo", "providers": overview_providers(request),
         "services": enabled_services(s), "llm_provider": s.llm_provider, "llm_model": s.llm_model, "bank_backend": s.bank_backend,
         "gateway_number": s.gateway_number or "(not set)", "products": shop, "advice": count(select(func.count(ShopAdvice.id))),

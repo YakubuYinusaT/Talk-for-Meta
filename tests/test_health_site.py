@@ -35,7 +35,8 @@ def test_every_page_loads_and_none_carries_anything_from_the_earlier_builds(site
 
 def test_the_home_page_explains_the_problem_the_solution_and_how_to_try_it(site):
     page = site.get("/overview").text
-    for line in ("book and follow your care from any phone call", "Care starts with a queue", "pen and paper", "Nobody follows up", "You decide, not Talk", "an area is not a hospital",
+    for line in ("essential services, from the phone people already have", "A phone is not the same as access", "Paper, handwritten registers", "Why we start with community healthcare",
+                 "Digital infrastructure", "Information organisation", "AI-enabled coordination", "Clinical decisions stay with people", "You decide, not Talk", "an area is not a hospital",
                  "Test it by phone", "+234 805 555 0100", "tel:+2348055550100", "Book an appointment in Yaba", "Muse Spark", "Muse Voice Transcribe", "Partner with us", "hello@example.com"):
         assert line.lower() in page.lower(), line
 

@@ -1,14 +1,14 @@
 {% extends "base.html" %}
 {% from "_media.html" import media %}
 {% from "_ui.html" import rule %}
-{% block title %}Talk: book and follow your care from any phone call{% endblock %}
+{% block title %}Talk: essential services from any phone call{% endblock %}
 
 {% block hero %}
 <section class="hero" aria-labelledby="ov-title">
   <div class="frame">
     <p class="eyebrow">Connected Intelligence</p>
-    <h1 id="ov-title">Talk: book and follow your care from any phone call.</h1>
-    <p class="lede">No app, no data, no queue. Call one number, say what you need in plain English, and Talk finds the clinic, books your time and follows up with you.</p>
+    <h1 id="ov-title">Talk: essential services, from the phone people already have.</h1>
+    <p class="lede">No smartphone, no app, no data. Call one number and say what you need. Talk moves the request into action: it books the clinic, answers from approved information, follows up, and hands what needs a person to the care team.</p>
     <div style="display:flex;flex-wrap:wrap;gap:var(--space-3);margin-top:var(--space-5)">
       <a class="btn" href="#test">Try it by phone</a>
       <a class="btn ghost" href="/overview/technology">How it works</a>
@@ -33,9 +33,9 @@
 
 {{ rule(n.v, "The problem") }}{% set n.v = n.v + 1 %}
 <div class="cols three">
-  <section class="card"><p class="eyebrow">Care starts with a queue</p><h3>You turn up, then you wait</h3><p class="small">In most hospitals a patient has to go there and queue to be seen. Some hospitals are moving to fixed appointment times, but the book is kept with pen and paper, and few have even a computer.</p></section>
-  <section class="card"><p class="eyebrow">Nobody sees the whole picture</p><h3>You cannot tell before you go</h3><p class="small">Clinics, hospitals and pharmacies each work alone. A patient cannot tell which is open, how long the wait is, what a visit costs or whether a medicine is in stock without making the journey.</p></section>
-  <section class="card"><p class="eyebrow">Nobody follows up</p><h3>No one checks who came</h3><p class="small">When the book is on paper, nobody reminds the patient who is coming, and nobody reaches out to the one who did not. For a person on a basic phone, that effort decides whether they go at all.</p></section>
+  <section class="card"><p class="eyebrow">The assumption</p><h3>A smartphone, data and a screen you can use</h3><p class="small">Healthcare, emergency assistance and public information increasingly assume a smartphone, reliable internet, digital literacy and the physical ability to navigate an interface. Millions of people have none of the four.</p></section>
+  <section class="card"><p class="eyebrow">Community healthcare</p><h3>Paper, handwritten registers, a journey to ask</h3><p class="small">Many facilities still run on paper records and physical visits. Patients travel to a hospital just to book an appointment, ask a question or follow up on their care, and some facilities have no computer at all. Information is fragmented, patients struggle to reach care and health workers carry the administrative load.</p></section>
+  <section class="card"><p class="eyebrow">Who is left furthest behind</p><h3>A phone is not the same as access</h3><p class="small">People with disabilities, older people, people with limited literacy and patients whose condition makes screens hard are hit hardest. Having a telephone does not mean having the information, the people or the services you need at a critical moment.</p></section>
 </div>
 
 {{ rule(n.v, "What Talk does") }}{% set n.v = n.v + 1 %}
@@ -45,6 +45,25 @@
   <section class="card"><p class="eyebrow">3. Booked and followed up</p><h3>Your time, then a check-in</h3><p class="small">Talk books your time in the clinic's own appointment book and texts you the details. It reminds you before the visit and checks in after it. If you did not come, it reaches out to help you rebook.</p></section>
 </div>
 <p class="caption">Where a hospital has no computer system, the appointment book Talk keeps for it is the system. <a href="/overview/use-cases">Everything Talk can do</a> · <a href="/overview/technology">How it works in detail</a></p>
+
+{{ rule(n.v, "In healthcare, Talk") }}{% set n.v = n.v + 1 %}
+<div class="cols three">
+  <section class="card"><p class="eyebrow">Live</p><h3>Coordinates appointments and enquiries</h3><p class="small">Find the nearest clinic, hospital or pharmacy, see the wait and the fee, book and cancel, check whether a medicine is in stock.</p></section>
+  <section class="card"><p class="eyebrow">Live</p><h3>Gives approved information</h3><p class="small">A caller's basic question is answered only from the facility's own patient guide, never from the model's memory. A warning sign is always answered first, exactly as the facility wrote it.</p></section>
+  <section class="card"><p class="eyebrow">Live</p><h3>Manages follow-up</h3><p class="small">A reminder the day before, a thank-you to the patient who came, an offer to rebook to the one who did not, and the care team's replies texted back.</p></section>
+  <section class="card"><p class="eyebrow">Live</p><h3>Routes requests to the right people</h3><p class="small">A booking goes to the provider the caller chose. A question the guide does not cover goes to that facility's staff, on their own front desk.</p></section>
+  <section class="card"><p class="eyebrow">Live</p><h3>Escalates what needs a person</h3><p class="small">Emergency words get the emergency number at once, and the nearest emergency care is told on its front desk, urgent first, with a text to staff if a number is set.</p></section>
+  <section class="card"><p class="eyebrow">Always</p><h3>Clinical decisions stay with people</h3><p class="small">Talk gives general information and coordinates care. It does not diagnose. Healthcare workers and trained front-desk assistants stay at the centre of the model.</p></section>
+</div>
+
+{{ rule(n.v, "Why we start with community healthcare") }}{% set n.v = n.v + 1 %}
+<p class="small">Two community hospitals have given us letters of intent to deploy Talk. In those conversations we found they lack even basic computing to organise their work, and putting AI into a facility that cannot organise its own information would solve only part of the problem. So the deployment has three parts.</p>
+<div class="cols three">
+  <section class="card"><p class="eyebrow">1. Digital infrastructure</p><h3>Computers and connectivity</h3><p class="small">Giving a participating facility the essential computers and internet connection it does not have.</p></section>
+  <section class="card"><p class="eyebrow">2. Information organisation</p><h3>Structure what is on paper</h3><p class="small">Helping the facility structure its existing operational and patient-service information, so authorised staff and AI systems can work with it.</p></section>
+  <section class="card"><p class="eyebrow">3. AI-enabled coordination</p><h3>Talk</h3><p class="small">Appointment management, patient enquiries, follow-up, request routing and administrative workflows, supporting the staff rather than replacing them.</p></section>
+</div>
+<p class="caption">The build on this site runs against four simulated providers until those facilities are connected: the same contract a real one uses, with made-up places, queues and patients.</p>
 
 {{ rule(n.v, "Test it by phone") }}{% set n.v = n.v + 1 %}
 <section class="card" id="test" aria-labelledby="test-title">
@@ -76,7 +95,7 @@
   <section class="card"><p class="eyebrow">{{ p.kind }}</p><h3>{{ p.name }}</h3><p class="small">{{ p.offers }}</p><a class="btn ghost" href="{{ p.desk }}">Open its front desk</a></section>
   {% endfor %}
 </div>
-<p class="caption">Each provider keeps its own records and answers Talk over a signed connection. <a href="/overview/providers">More about the providers</a></p>
+<p class="caption">Each provider keeps its own records, answers Talk over a signed connection, and sees the requests waiting for its staff on its front desk. <a href="/overview/providers">More about the providers</a></p>
 
 {{ rule(n.v, "Built with Meta's Muse models") }}{% set n.v = n.v + 1 %}
 <section class="card">
@@ -90,7 +109,7 @@
 <div class="cols three">
   <section class="card"><p class="eyebrow">Next</p><h3>Order from a photo</h3><p class="small">A patient sends a photo of a prescription or a drug label through a link by text. Talk reads it, and the pharmacist approves before anything is dispensed.</p></section>
   <section class="card"><p class="eyebrow">Next</p><h3>Repeat care</h3><p class="small">For a registered patient: repeat medicines before they run out, and antenatal visits and supplements on schedule, behind consent and a PIN.</p></section>
-  <section class="card"><p class="eyebrow">Built</p><h3>Faster calls</h3><p class="small">A direct phone line into Talk, so the caller hears a reply as they finish speaking.</p></section>
+  <section class="card"><p class="eyebrow">Next</p><h3>Beyond healthcare</h3><p class="small">The same architecture can carry government services, public information and emergency coordination, with each institution connected the way a provider is today.</p></section>
 </div>
 
 {{ rule(n.v, "Partner with us") }}{% set n.v = n.v + 1 %}

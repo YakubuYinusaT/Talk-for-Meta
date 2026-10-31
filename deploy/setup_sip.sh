@@ -10,7 +10,7 @@
 #   bash setup_sip.sh sniff [s]  show the SIP messages that reach this machine for s seconds (default 90): does the trunk's call arrive at all?
 #   bash setup_sip.sh off        stop Asterisk, close the ports, switch the agent off (the callback path is untouched)
 #
-# Run as root, after deploy_health.sh has put the build in /opt/sofa-health.
+# Run as root, with the app installed in /opt/sofa-health (src for the code, venv for its Python, data for its files).
 set -euo pipefail
 
 NEW=/opt/sofa-health
@@ -51,7 +51,7 @@ firewall() {  # firewall add|remove
 }
 
 install_all() {
-  [[ -d "$NEW/src" ]] || { echo "The new build is not in $NEW: run deploy_health.sh first."; exit 1; }
+  [[ -d "$NEW/src" ]] || { echo "The new build is not in $NEW: install the app there first."; exit 1; }
   echo "1/5 Installing Asterisk (a few minutes)"
   DEBIAN_FRONTEND=noninteractive apt-get install -y -qq asterisk >/dev/null
   systemctl stop asterisk >/dev/null 2>&1 || true

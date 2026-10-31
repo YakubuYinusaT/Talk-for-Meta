@@ -39,6 +39,11 @@ TOOLS = [
      "params": [{"name": "query", "prompt": "The question", "required": True}]},
     {"name": "visit_status", "description": "What became of one of the caller's own visits: still booked, attended, missed or cancelled",
      "params": [{"name": "code", "prompt": "The booking code", "required": True}]},
+    {"name": "request", "description": "Pass something to this provider's staff: a question its guide does not cover, a wish to speak to a person, or an emergency", "risk": "service",
+     "params": [{"name": "kind", "prompt": "question, person or emergency", "required": True}, {"name": "summary", "prompt": "What the caller said", "required": True},
+                {"name": "urgent", "prompt": "Is it urgent?", "required": False}]},
+    {"name": "request_status", "description": "Whether the staff have answered one of the caller's own requests, and what they said",
+     "params": [{"name": "code", "prompt": "The request code", "required": True}]},
 ]
 
 
@@ -106,7 +111,7 @@ class Provider:
 
     def call(self, tool: str, args: dict, ctx: dict) -> dict:
         handler = {"search": self.search, "slots": self.slots, "book": self.book, "cancel": self.cancel, "upcoming": self.upcoming, "stock": self.stock,
-                   "knowledge": self.knowledge, "visit_status": self.visit_status}.get(tool)
+                   "knowledge": self.knowledge, "visit_status": self.visit_status, "request": self.request, "request_status": self.request_status}.get(tool)
         if not handler:
             return refuse("unknown_tool")
         try:
@@ -182,7 +187,8 @@ class Provider:
         """Entries from this provider's patient guide, if it has one. Talk answers only from what comes back; an empty list means the guide does not cover it."""
         if self.network.slug != "onc-centre":
             return ok(entries=[])
-        return ok(entries=knowledge.search(str(args.get("query") or ""), max(1, min(int(args.get("limit") or 3), 5))), provider=self.network.name)
+        sms_name = next((f.sms_name for f in self.network.facilities if f.sms_name), self.network.name)
+        return ok(entries=knowledge.search(str(args.get("query") or ""), max(1, min(int(args.get("limit") or 3), 5))), provider=self.network.name, sms_name=sms_name)
 
     def visit_status(self, args: dict, ctx: dict) -> dict:
         caller = str(ctx.get("caller_id") or "")
@@ -190,6 +196,22 @@ class Provider:
         if not found:
             return refuse("not_found")
         return ok(code=found["code"], status=found["status"], starts=found["starts"].isoformat(), facility_name=self.store.by_id[found["facility_id"]].name, visit=found["visit"])
+
+    def request(self, args: dict, ctx: dict) -> dict:
+        """A request for this provider's staff. It carries the caller's reference and what they said, never a phone number."""
+        caller = str(ctx.get("caller_id") or "")
+        kind = str(args.get("kind") or "")
+        summary = " ".join(str(args.get("summary") or "").split())
+        if not caller or not summary or kind not in self.store.REQUEST_KINDS:
+            return refuse("bad_request")
+        return ok(request=self.store.add_request(kind, bool(args.get("urgent")), summary, caller))
+
+    def request_status(self, args: dict, ctx: dict) -> dict:
+        caller = str(ctx.get("caller_id") or "")
+        found = self.store.request(str(args.get("code") or ""), caller) if caller else None
+        if not found:
+            return refuse("not_found")
+        return ok(request=found)
 
     def stock(self, args: dict, ctx: dict) -> dict:
         now = self.store.clock()
@@ -245,6 +267,14 @@ def create_provider_app(network: data.Network, secret: str, store: HospitalStore
         store.mark(str(form.get("code", "")), str(form.get("outcome", "")))
         return RedirectResponse(f"../?key={form.get('key')}", status_code=303)
 
+    @app.post("/desk/reply")
+    async def reply(request: Request):
+        form = await request.form()
+        if not desk_key or not hmac.compare_digest(str(form.get("key", "")), desk_key):
+            raise HTTPException(status_code=403, detail="the desk key is needed")
+        store.reply_request(str(form.get("code", "")), str(form.get("reply", "")))
+        return RedirectResponse(f"../?key={form.get('key')}", status_code=303)
+
     @app.get("/", response_class=HTMLResponse)
     def desk(key: str = ""):
         """This provider's front desk: its places with the queue now, and the appointments booked. Made-up data, labelled as such."""
@@ -267,6 +297,18 @@ def create_provider_app(network: data.Network, secret: str, store: HospitalStore
                                   for o, label in (("attended", "Attended"), ("no_show", "Did not come")))
             booked.append(f"<tr><td>{html.escape(r['code'])}</td><td>{html.escape(f.name)}</td><td>{when:%a %d %b %H:%M}</td><td>{html.escape(r['visit'])}</td>"
                           f"<td>{html.escape(r['caller_ref'][:8])}</td><td>{html.escape(r['status'].replace('_', ' '))}</td><td>{buttons}</td></tr>")
+        asks = []
+        waiting = 0
+        for r in store.requests(60):
+            when = datetime.fromisoformat(r["created"])
+            waiting += 1 if r["status"] == "open" else 0
+            answer = html.escape(r["reply"]) if r["status"] == "answered" else ""
+            if marking and r["status"] == "open":
+                answer = (f"<form method=post action=desk/reply><input type=hidden name=key value='{html.escape(key)}'><input type=hidden name=code value='{html.escape(r['code'])}'>"
+                          "<input name=reply size=34 placeholder='Your answer' maxlength=300> <button>Reply</button></form>")
+            urgent = "<b style=color:#b91c1c>URGENT</b> " if r["urgent"] and r["status"] == "open" else ""
+            asks.append(f"<tr><td>{html.escape(r['code'])}</td><td>{urgent}{html.escape(r['kind'])}</td><td>{html.escape(r['summary'])}</td><td>{when:%a %d %b %H:%M}</td>"
+                        f"<td>{html.escape(r['caller_ref'][:8])}</td><td>{html.escape(r['status'])}</td><td>{answer}</td></tr>")
         return HTMLResponse(
             "<!doctype html><meta charset=utf-8><meta name=viewport content='width=device-width,initial-scale=1'>"
             f"<title>{html.escape(network.name)}</title>"
@@ -274,6 +316,8 @@ def create_provider_app(network: data.Network, secret: str, store: HospitalStore
             ".tag{background:#fde68a;padding:4px 8px;border-radius:4px}</style>"
             f"<h1>{html.escape(network.name)}: front desk</h1><p><span class=tag>Synthetic data</span> Every place, queue, price and booking here is made up for a demonstration.</p>"
             f"<h2>Queues now ({now:%a %d %b %H:%M})</h2><table><tr><th>Place<th>Kind<th>Area<th>Now<th>Waiting<th>Estimated wait<th>Fee (naira)</tr>{''.join(rows)}</table>"
+            f"<h2>Requests for the care team ({waiting} waiting)</h2><table><tr><th>Ref<th>Kind<th>What was asked<th>When<th>Caller ref<th>Status<th>Answer</tr>"
+            f"{''.join(asks) or '<tr><td colspan=7>None yet</td></tr>'}</table>"
             f"<h2>Appointment book</h2><table><tr><th>Code<th>Place<th>When<th>Visit<th>Caller ref<th>Status<th></tr>{''.join(booked) or '<tr><td colspan=7>None yet</td></tr>'}</table>"
             + ("<p><span class=tag>Sample content</span> The patient guide this centre answers questions from is sample text written for the demonstration.</p>" if network.slug == "onc-centre" else "")
             +

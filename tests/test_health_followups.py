@@ -54,7 +54,7 @@ def test_a_patient_who_came_is_thanked_once(client, happ, hdb):
     assert done["attended"] == 1 and done["thanked"] == 1
     thanks = texts(hdb, "health_thanks")
     assert len(thanks) == 1 and "Thank you for coming to Aguda Community Health Centre" in thanks[0].body and "book an appointment" in thanks[0].body
-    assert run(happ, VISIT_DAY_NOON) == {"reminders": 0, "attended": 0, "missed": 0, "thanked": 0, "chased": 0, "not_marked": 0}
+    assert run(happ, VISIT_DAY_NOON) == {"reminders": 0, "attended": 0, "missed": 0, "thanked": 0, "chased": 0, "not_marked": 0, "replied": 0}
     hdb.expire_all()
     assert hdb.scalar(select(HealthAppointment)).status == "attended"
 
@@ -71,7 +71,7 @@ def test_a_patient_who_did_not_come_hears_from_us_once(client, happ, hdb):
 
 def test_a_visit_the_clinic_has_not_marked_is_left_alone(client, happ, hdb):
     call(client, BOOK_ANY_CLINIC)
-    assert run(happ, VISIT_DAY_NOON) == {"reminders": 0, "attended": 0, "missed": 0, "thanked": 0, "chased": 0, "not_marked": 0}
+    assert run(happ, VISIT_DAY_NOON) == {"reminders": 0, "attended": 0, "missed": 0, "thanked": 0, "chased": 0, "not_marked": 0, "replied": 0}
     hdb.expire_all()
     assert hdb.scalar(select(HealthAppointment)).status == "booked" and texts(hdb, "health_thanks") == [] and texts(hdb, "health_missed") == []     # nobody is told anything untrue
 
@@ -121,4 +121,4 @@ def test_without_the_health_front_desk_there_is_nothing_to_do(tmp_path):
     from sofa.main import create_app
 
     app = create_app(Settings(database_url="sqlite://", storage_dir=str(tmp_path), at_callback_secret="x", public_base_url="http://test", scheduler_enabled=False, _env_file=None))
-    assert asyncio.run(followups.run(app.state.svc, FIXED)) == {"reminders": 0, "attended": 0, "missed": 0, "thanked": 0, "chased": 0, "not_marked": 0}
+    assert asyncio.run(followups.run(app.state.svc, FIXED)) == {"reminders": 0, "attended": 0, "missed": 0, "thanked": 0, "chased": 0, "not_marked": 0, "replied": 0}

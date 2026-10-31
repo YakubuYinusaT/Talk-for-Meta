@@ -135,6 +135,35 @@ class HealthAdapter(ServiceAdapter):
             gw.db.commit()  # the call's record is saved at once: a database lock must not be held while the next slow step runs
         return {**result.data, "ok": result.ok}
 
+    async def file_request(self, gw, spec, kind: str, summary: str, *, urgent: bool = False, name: str = "", sms_name: str = "") -> dict | None:
+        """Pass something to a provider's staff, so a person sees it on that provider's own front desk and can answer it. The provider gets what the caller said and a
+        reference, never the phone number. The call never fails over it: None when it could not be filed."""
+        from ...models import HealthRequest
+
+        try:
+            answer = await self.provider_call(gw, spec, "request", {"kind": kind, "summary": summary[:300], "urgent": urgent})
+            filed = (answer or {}).get("request")
+            if not filed:
+                return None
+            gw.db.add(HealthRequest(customer_id=gw.customer.id, provider=spec.domain, code=filed["code"], kind=kind, urgent=urgent,
+                                    facility_name=name or spec.label, sms_name=sms_name or name or spec.label))
+            gw.db.commit()
+            if urgent:
+                await self.alert_staff(gw, name or spec.label, filed["code"])
+            return filed
+        except Exception:
+            log.exception("a request for the care team could not be filed")
+            return None
+
+    async def alert_staff(self, gw, place: str, code: str) -> None:
+        """An urgent request is also texted to the staff number in the settings, if there is one."""
+        from ...services.notify import send_sms
+
+        phone = (gw.svc.settings.hospital_staff_phone or "").strip()
+        if phone:
+            await send_sms(gw.db, gw.svc, to=phone, body=f"Urgent request {code} for {place}. Open the front desk to read it and reply.", template="health_staff_alert")
+            gw.db.commit()
+
     async def ask_all(self, gw, op: str, args: dict, kind: str | None = None) -> list[tuple[object, dict]]:
         specs = self.specs(kind)
         answers = await asyncio.gather(*(self.provider_call(gw, s, op, args) for s in specs))
@@ -263,6 +292,13 @@ class HealthAdapter(ServiceAdapter):
         text = f"{lead}The nearest {what} is {speak.place_line(found[0], now, queue=not emergency, fee=not emergency)}"
         if found[1:]:
             text += " Others are " + "; ".join(speak.option_line(f, brief=emergency) for f in found[1:3]) + "."
+        if emergency:   # a person at the nearest emergency care is told, on their own front desk, that this caller described an emergency
+            place = next((f for f in found if f.get("emergency")), found[0])
+            said = req.utterance or "an emergency was described"
+            filed = await self.file_request(gw, self.spec_of(place), "emergency", f"Emergency words heard{' near ' + req.area if req.area else ''}: {said}", urgent=True,
+                                            name=place["name"], sms_name=place.get("sms_name") or place["name"])
+            if filed:
+                text += f" I have also told {place.get('sms_name') or place['name']}, so the team there can follow up."
         bookable = [f for f in found if f["bookable"]]
         if emergency or not bookable:
             return self.say(gw, text, "health_find")
@@ -442,7 +478,10 @@ class HealthAdapter(ServiceAdapter):
             return self.nothing_reachable(gw)
         entries = sorted((e for _, a in answered for e in a.get("entries", [])), key=lambda e: -e["score"])[:3]
         gw.raw_json = {"health": "ask_the_centre", "entries": [e["id"] for e in entries]}
-        if not entries:
+        if not entries:     # the guide does not cover it: the centre's staff see the question on their front desk, and the answer is texted back
+            target = next(((s, a) for s, a in answered if a.get("provider")), None)
+            if target:
+                await self.file_request(gw, target[0], "question", question, name=target[1]["provider"], sms_name=target[1].get("sms_name", ""))
             return await gw.give_up("health_not_in_the_guide", question)
         if entries[0]["id"] == "urgent-signs":   # a warning sign is spoken exactly as the centre wrote it, never reworded
             return self.say(gw, entries[0]["answer"], "health_urgent_signs")

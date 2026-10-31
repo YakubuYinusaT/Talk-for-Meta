@@ -29,15 +29,29 @@ def mock_mixed_url(readings: dict) -> str:
     return "mock:" + quote("MOCKX:" + json.dumps({k: list(v) for k, v in readings.items()}), safe="")
 
 
-async def fetch_recording(url: str, attempts: int = 5, wait: float = 0.4, http: httpx.AsyncClient | None = None) -> bytes:
+def check_recording_address(url: str, allowed: tuple[str, ...]) -> None:
+    """A recording is downloaded only over https and only from the telephony provider's own hosts (and their sub-domains): an address that arrives in a callback
+    is not trusted to be a recording. An empty list means no restriction."""
+    if not allowed:
+        return
+    from urllib.parse import urlsplit
+
+    parts = urlsplit(url)
+    host = (parts.hostname or "").lower()
+    if parts.scheme != "https" or not any(host == h or host.endswith("." + h) for h in allowed):
+        raise ValueError(f"a recording is not downloaded from {host or 'that address'}")
+
+
+async def fetch_recording(url: str, attempts: int = 5, wait: float = 0.4, http: httpx.AsyncClient | None = None, allowed: tuple[str, ...] = ()) -> bytes:
     """Africa's Talking recording URLs expire, so copy the audio to our own storage per turn.
 
     The address arrives the moment the recording ends, and on a real call the file was not yet on their server ("404 Not Found"). So a missing or
     busy file is asked for again a few times, a little later each time, before the turn is given up."""
     if url.startswith("mock:"):
         return unquote(url[len("mock:"):]).encode("utf-8")
+    check_recording_address(url, allowed)
     own = http is None
-    http = http or httpx.AsyncClient(timeout=15, follow_redirects=True)
+    http = http or httpx.AsyncClient(timeout=15, follow_redirects=not allowed)   # with a list of hosts every hop is checked here, so a redirect cannot lead elsewhere
     # On the first real call the address Africa's Talking sent ended "...T.mp3" and answered 404, while the same file without the stray "T" answered
     # 200. So the address as sent is tried first, then that one.
     plain = re.sub(r"T(\.[A-Za-z0-9]{2,4})$", r"\1", url.split("?")[0])
@@ -48,6 +62,12 @@ async def fetch_recording(url: str, attempts: int = 5, wait: float = 0.4, http: 
             for candidate in candidates:
                 try:
                     resp = await http.get(candidate)
+                    for _ in range(3 if allowed else 0):
+                        if not (resp.is_redirect and resp.headers.get("location")):
+                            break
+                        nxt = str(resp.url.join(resp.headers["location"]))
+                        check_recording_address(nxt, allowed)
+                        resp = await http.get(nxt)
                 except (httpx.ConnectError, httpx.ReadTimeout, httpx.ConnectTimeout, httpx.RemoteProtocolError):
                     last = None
                     continue

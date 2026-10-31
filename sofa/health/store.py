@@ -44,6 +44,10 @@ class HospitalStore:
             CREATE INDEX IF NOT EXISTS appointments_slot ON appointments (facility_id, starts);
             CREATE INDEX IF NOT EXISTS appointments_caller ON appointments (caller_ref);
             CREATE TABLE IF NOT EXISTS queue_overrides (facility_id TEXT PRIMARY KEY, people INTEGER NOT NULL, set_at TEXT NOT NULL);
+            CREATE TABLE IF NOT EXISTS requests (
+                code TEXT PRIMARY KEY, caller_ref TEXT NOT NULL, kind TEXT NOT NULL, urgent INTEGER NOT NULL DEFAULT 0, summary TEXT NOT NULL,
+                status TEXT NOT NULL DEFAULT 'open', reply TEXT NOT NULL DEFAULT '', created TEXT NOT NULL, replied TEXT);
+            CREATE INDEX IF NOT EXISTS requests_status ON requests (status, urgent, created);
         """)
         self.by_id = {f.id: f for f in self.facilities}
 
@@ -150,6 +154,36 @@ class HospitalStore:
         """One of the caller's own visits and what became of it. Another caller's code is not found."""
         r = self.db.execute("SELECT * FROM appointments WHERE code = ? AND caller_ref = ?", (code, caller_ref)).fetchone()
         return None if not r else {"code": r["code"], "facility_id": r["facility_id"], "starts": datetime.fromisoformat(r["starts"]), "visit": r["visit"], "status": r["status"]}
+
+    # ---- requests for the care team ------------------------------------------------------------------
+
+    REQUEST_KINDS = ("question", "person", "emergency")
+
+    def add_request(self, kind: str, urgent: bool, summary: str, caller_ref: str) -> dict:
+        """Something Talk could not settle for a caller and passes to this provider's staff: a question its guide does not cover, a wish to speak to a person, or an
+        emergency to know about. The staff see it on the front desk, urgent ones first, and answer it there."""
+        code = "REQ-" + "".join(secrets.choice(CODE_ALPHABET) for _ in range(4))
+        self.db.execute("INSERT INTO requests (code, caller_ref, kind, urgent, summary, created) VALUES (?, ?, ?, ?, ?, ?)",
+                        (code, caller_ref, kind, 1 if urgent or kind == "emergency" else 0, summary[:300], self.clock().isoformat()))
+        return {"code": code, "kind": kind, "urgent": bool(urgent or kind == "emergency"), "status": "open"}
+
+    def requests(self, limit: int = 60) -> list[sqlite3.Row]:
+        """Open requests first, urgent before the rest and the oldest first, then the ones answered recently."""
+        return self.db.execute("SELECT * FROM requests ORDER BY CASE status WHEN 'open' THEN 0 ELSE 1 END, urgent DESC, "
+                               "CASE status WHEN 'open' THEN created END ASC, replied DESC LIMIT ?", (limit,)).fetchall()
+
+    def reply_request(self, code: str, text: str) -> bool:
+        """The staff's answer. Only an open request can be answered, and only once."""
+        text = " ".join(text.split())[:300]
+        if not text:
+            return False
+        return self.db.execute("UPDATE requests SET status = 'answered', reply = ?, replied = ? WHERE code = ? AND status = 'open'",
+                               (text, self.clock().isoformat(), code)).rowcount == 1
+
+    def request(self, code: str, caller_ref: str) -> dict | None:
+        """One of the caller's own requests and what became of it. Another caller's code is not found."""
+        r = self.db.execute("SELECT * FROM requests WHERE code = ? AND caller_ref = ?", (code, caller_ref)).fetchone()
+        return None if not r else {"code": r["code"], "kind": r["kind"], "urgent": bool(r["urgent"]), "status": r["status"], "reply": r["reply"]}
 
     # ---- medicines ---------------------------------------------------------------------------------
 

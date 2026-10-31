@@ -18,7 +18,7 @@ def test_masking_and_scrubbing():
 
 
 def test_the_page_shows_calls_with_the_numbers_masked(client, app, call, db):
-    app.state.svc.settings.demo_page_enabled = True
+    app.state.svc.settings.demo_page_enabled = app.state.svc.settings.demo_show_calls = True
     call(SPEC_CONVERSATION, caller=MUSA)
     html = client.get("/demo").text
     assert "Everyday services, by voice" in html and "Latest calls" in html
@@ -35,7 +35,7 @@ def test_the_demo_logins_are_hidden_once_real_passwords_are_set(client, app):
 
 
 def test_what_is_typed_on_the_keypad_is_never_shown(client, app, db):
-    app.state.svc.settings.demo_page_enabled = True
+    app.state.svc.settings.demo_page_enabled = app.state.svc.settings.demo_show_calls = True
     c = Call(provider_session_id="s", from_number="+2348055550101", to_number="+2347000000000")
     db.add(c)
     db.flush()

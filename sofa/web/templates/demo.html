@@ -17,7 +17,7 @@
 {% endblock %}
 
 {% block body %}
-<div class="flash" role="note"><b>This page shows what callers said.</b> Phone numbers are masked to the last four digits and long numbers are hidden.</div>
+<div class="flash" role="note">{% if show_calls %}<b>This page shows what callers said.</b> Phone numbers are masked to the last four digits and long numbers are hidden.{% else %}<b>This page shows what happened, not what callers said.</b> Phone numbers are masked to the last four digits.{% endif %}</div>
 
 {{ rule(1, "So far") }}
 <div class="cols three">
@@ -66,7 +66,7 @@
     <caption>What the caller said and how {{ "Talk" if side == "health" else "Sofa" }} replied</caption>
     <thead><tr><th scope="col">Caller said</th><th scope="col">{{ "Talk" if side == "health" else "Sofa" }} did</th><th scope="col">{{ "Talk" if side == "health" else "Sofa" }} said</th><th scope="col" class="right">Time</th></tr></thead>
     <tbody>
-    {% for t in c.turns %}<tr><td data-label="Caller said">{{ t.said or "(silence)" }}</td><td data-label="Action" class="data-s">{{ t.action or "-" }}</td><td data-label="Reply">{{ t.reply }}</td><td data-label="Time" class="right data-s">{% if t.ms %}{{ t.ms }} ms{% endif %}</td></tr>{% endfor %}
+    {% for t in c.turns %}<tr><td data-label="Caller said">{% if show_calls %}{{ t.said or "(silence)" }}{% else %}not shown{% endif %}</td><td data-label="Action" class="data-s">{{ t.action or "-" }}</td><td data-label="Reply">{% if show_calls %}{{ t.reply }}{% else %}not shown{% endif %}</td><td data-label="Time" class="right data-s">{% if t.ms %}{{ t.ms }} ms{% endif %}</td></tr>{% endfor %}
     </tbody>
   </table></div>
 </section>

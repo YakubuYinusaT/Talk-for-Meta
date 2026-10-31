@@ -315,6 +315,21 @@ class HealthAppointment(Row, Base):
     followed_up_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
+class HealthRequest(Row, Base):
+    """Something Talk passed to a provider's staff for a caller (a question the patient guide does not cover, an emergency to know about), so the answer can be texted
+    back. The staff see the request on the provider's own front desk; Talk keeps only its code, where it went and whether the answer has been texted."""
+    __tablename__ = "health_requests"
+    customer_id: Mapped[uuid.UUID] = fk("customers")
+    provider: Mapped[str] = mapped_column(String(50))                  # the provider system's name for Talk (its service domain)
+    code: Mapped[str] = mapped_column(String(20), index=True)
+    kind: Mapped[str] = mapped_column(String(20))                      # question | person | emergency
+    urgent: Mapped[bool] = mapped_column(Boolean, default=False)
+    facility_name: Mapped[str] = mapped_column(String(160))
+    sms_name: Mapped[str] = mapped_column(String(160))
+    status: Mapped[str] = mapped_column(String(20), default="open")    # open | answered | expired
+    texted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
 class OutboundCall(Row, Base):
     __tablename__ = "outbound_calls"
     order_id: Mapped[uuid.UUID] = fk("orders")

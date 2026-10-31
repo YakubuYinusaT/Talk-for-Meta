@@ -499,7 +499,7 @@ async def run_turn(svc, session_id: str, recording_url: str | None, turn_id: uui
                 if wav16 is not None:  # a streamed call: the speech is already here
                     raw = audio = wav16
                 else:
-                    raw = await fetch_recording(recording_url)
+                    raw = await fetch_recording(recording_url, allowed=svc.settings.recording_hosts)
                     audio = to_16k_mono(raw)
                 turn.audio_path = svc.audio.save_call_audio(call.id, seq, raw)
                 lat["audio_fetch"] = int((time.perf_counter() - t) * 1000)

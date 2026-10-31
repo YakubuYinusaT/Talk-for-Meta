@@ -5,7 +5,7 @@
 #   bash setup_voice.sh install    install the package and one English voice, point the settings at it, restart, and speak a test sentence
 #   bash setup_voice.sh check      speak a test sentence with it and show the time it took
 #
-# Run as root, after deploy_health.sh has put the build in /opt/sofa-health. The voice is a download of about 60 MB.
+# Run as root, with the app installed in /opt/sofa-health (src for the code, venv for its Python, data for its files). The voice is a download of about 60 MB.
 set -euo pipefail
 
 NEW=/opt/sofa-health
@@ -23,7 +23,7 @@ check() {
 }
 
 install_voice() {
-  [[ -d "$NEW/src" ]] || { echo "The build is not in $NEW: run deploy_health.sh first."; exit 1; }
+  [[ -d "$NEW/src" ]] || { echo "The build is not in $NEW: install the app there first."; exit 1; }
   echo "1/4 Installing the package"
   "$NEW/venv/bin/pip" install --quiet piper-tts
   echo "2/4 Downloading the voice $VOICE (about 60 MB)"

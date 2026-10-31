@@ -109,13 +109,15 @@ class Settings(BaseSettings):
     hospital_base_url: str = ""                # where Talk reaches them; empty = <PUBLIC_BASE_URL>/synthetic. Each is <base>/<name>/rpc and must be a public https address
     hospital_signing_secret: str = ""          # from this, each provider's own secret is derived; empty = derived from AT_CALLBACK_SECRET, so a demo needs no extra setting
     hospital_db_dir: str = ""                  # where each provider keeps its own database file; empty = the storage folder
+    hospital_staff_phone: str = ""             # a number that is texted when an urgent request reaches a provider's front desk (an emergency); empty = no text
     hospital_desk_key: str = ""                # lets a provider's front-desk page mark visits attended or missed (open the page with ?key=...); empty = read only
     bank_backend: str = "mock"  # "mock": the stand-in with sample data. "demobank": the real API once its sandbox is available (see gateway/bankapi.py)
     min_age_user: int = 12     # the youngest person Sofa serves at all
     banking_min_age: int = 16  # the youngest person who may use banking (checked on the date of birth typed on the keypad)
 
     admin_token: str = "dev-admin-token"
-    demo_page_enabled: bool = False  # the public judges' page (/demo): shows what callers said, so keep it off except on a demo deployment
+    demo_page_enabled: bool = False  # the public live page (/demo): counts and what happened in recent calls
+    demo_show_calls: bool = False    # also show what callers said and what Talk replied (only for a demo where every caller knows it is shown)
     # The overview pages (/overview): the story, the technology, the use cases and what testing the models showed. Public and read-only. What changes from one
     # deployment to the next (who to email, the number to call, the videos, the deck) is set here, so the pages stay the same and these lines fill them in.
     overview_enabled: bool = True
@@ -136,6 +138,8 @@ class Settings(BaseSettings):
     test_caller_numbers: str = "+2348000000001"
     scheduler_enabled: bool = True  # background jobs: the 7 PM merchant report
     scheduler_interval_seconds: int = 60
+    recording_allowed_hosts: str = "africastalking.com"  # a recording is downloaded only from these hosts (and their sub-domains), over https; empty = any (not safe)
+    recording_retention_days: int = 30   # a caller's recording is deleted this long after the call; 0 keeps recordings
     debug_headers: bool = True  # X-Sofa-* headers used by the call simulator
 
     # Outbound status calls (payment received, dispatched, delivered). Calls to customers cost more than incoming ones
@@ -210,6 +214,10 @@ class Settings(BaseSettings):
     def provider_endpoint(self, slug: str) -> str:
         base = self.hospital_base_url or f"{self.public_base_url.rstrip('/').replace('http://', 'https://', 1)}/synthetic"
         return f"{base.rstrip('/')}/{slug}/rpc"
+
+    @property
+    def recording_hosts(self) -> tuple[str, ...]:
+        return tuple(h.strip().lower().lstrip(".") for h in self.recording_allowed_hosts.split(",") if h.strip())
 
     @property
     def paystack_is_mock(self) -> bool:
