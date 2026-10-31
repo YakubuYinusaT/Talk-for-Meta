@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% from "_ui.html" import rule %}
+{% block title %}The providers{% endblock %}
+
+{% block hero %}
+<section class="hero" aria-labelledby="p-title">
+  <div class="frame">
+    <p class="eyebrow">The providers</p>
+    <h1 id="p-title">Four independent systems, one phone number.</h1>
+    <p class="lede">Talk holds no hospital records. Each provider runs its own system, and Talk reaches it over a signed connection.</p>
+  </div>
+</section>
+{% endblock %}
+
+{% block body %}
+
+{{ rule(1, "Who is connected") }}
+<div class="cols two">
+  {% for p in providers %}
+  <section class="card">
+    <p class="eyebrow">{{ p.kind }} · {{ p.places }} place{{ "s" if p.places != 1 else "" }}</p>
+    <h3>{{ p.name }}</h3>
+    <p class="small">{{ p.offers }}</p>
+    <a class="btn" href="{{ p.desk }}">Open its front desk</a>
+  </section>
+  {% endfor %}
+</div>
+
+{{ rule(2, "What a front desk shows") }}
+<p class="small">Each front desk page is the provider's own view: its places with the queue now, and its appointment book. A booking made on a call appears here a moment later. The book shows each caller only as a short reference, because the provider never sees a phone number. Where a hospital has no computer system, this page is the appointment book it did not have.</p>
+
+{{ rule(3, "Simulated, and built for the real thing") }}
+<p class="small">The four providers on this site are simulated: their places, queues, fees, stock and patients are made up. They are built to the same contract a real provider uses, with their own records, their own secret and signed requests, so connecting a real hospital means a new connection and real data, not a new design. The patient guide of the cancer centre is sample content that the centre's own guide will replace.</p>
+<p class="caption"><a href="/overview/technology">How a provider connects</a> · <a href="/overview">Back to the overview</a></p>
+{% endblock %}

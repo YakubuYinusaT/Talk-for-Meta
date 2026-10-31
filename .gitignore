@@ -1,0 +1,20 @@
+.env
+data/
+__pycache__/
+*.pyc
+.pytest_cache/
+*.egg-info/
+
+# real call recordings and test results stay off GitHub
+recordings/
+asr_gate_*.json
+gpu_smoke_out/
+deliverables/
+
+# voice samples made for listening tests
+voice_samples/
+
+# saved test calls and voice-check clips, kept for later review
+review_runs/
+voice_check_*/
+spitch_*.wav

@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% from "_media.html" import media %}
+{% from "_ui.html" import rule, metric %}
+{% block title %}Talk, an AI agent that serves you over a phone call{% endblock %}
+
+{% block hero %}
+<section class="hero" aria-labelledby="ov-title">
+  <div class="frame">
+    <p class="eyebrow">Connected Intelligence</p>
+    <h1 id="ov-title">Talk: an AI agent that serves you over a phone call.</h1>
+    <p class="lede">Digital services for people with no smartphone and no data. Talk is powered by SOFA, our own agentic AI engine, built on open models.</p>
+    <div style="display:flex;flex-wrap:wrap;gap:var(--space-3);margin-top:var(--space-5)">
+      <a class="btn" href="#test">Try it by phone</a>
+      {% if demo_page %}<a class="btn ghost" href="/demo">See live calls</a>{% endif %}
+      <a class="btn ghost" href="#partner">Partner with us</a>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block body %}
+
+{% set n = namespace(v=1) %}
+{% if has_watch %}
+{{ rule(n.v, "Watch and listen") }}{% set n.v = n.v + 1 %}
+<div class="cols two">
+  {% if s.hub_story_video_url %}<section class="card"><p class="eyebrow">The story</p><h3>The problem and what we built</h3>{{ media(story, "The story: the problem and what we built", "A short talk on the problem and how Talk solves it.", "Watch the story") }}</section>{% endif %}
+  {% if demo.kind %}<section class="card"><p class="eyebrow">The demo</p><h3>A call, from start to finish</h3>{{ media(demo, "The demo: a call from start to finish", "A call to Talk, and what the shop owner sees.", "Watch the demo", demo_captions, demo_poster) }}</section>{% endif %}
+  {% if deck %}<section class="card"><p class="eyebrow">Read</p><h3>The pitch deck</h3><p class="small">{{ deck }} slides: the problem, how Talk works, what already runs and where it goes next.</p><a class="btn" href="/overview/deck">View the deck</a></section>{% endif %}
+  {% if s.hub_audio_url %}<section class="card"><p class="eyebrow">Listen</p><h3>The explainer</h3><p class="small">The problem and the solution, in our own voice.</p><audio controls preload="none" style="width:100%" src="{{ s.hub_audio_url }}"></audio></section>{% endif %}
+</div>
+{% endif %}
+
+{{ rule(n.v, "The problem, and what we built") }}{% set n.v = n.v + 1 %}
+<div class="cols three">
+  {{ metric("Mobile lines in Nigeria", "195.1M", "NCC, July 2026") }}
+  {{ metric("Of those, on 2G", "1 in 3", "voice works, apps do not") }}
+  {{ metric("Adults outside finance", "28.8M", "EFInA, 2023") }}
+</div>
+<div class="cols two" style="margin-top:var(--space-5)">
+  <section class="card"><p class="eyebrow">The problem</p><h3>Digital assumes a smartphone</h3>
+    <p class="small">Banking, shopping, information, logistics and other everyday services are becoming digital by default. A person without a smartphone or reliable internet still needs them, and the alternative is a journey and a queue. Most AI is built the same way, around apps and data, so it widens the gap.</p></section>
+  <section class="card"><p class="eyebrow">What we built</p><h3>Call, ask, done</h3>
+    <p class="small">Talk turns an ordinary phone call into a way to use digital services. You call, say what you need in your own language, and Talk finds the service, gets it done and tells you the result. It works on any phone, on any network, with nothing to install. SOFA, our engine underneath, understands the request, picks the service and coordinates the tools.</p></section>
+</div>
+<p class="caption"><a href="/overview/technology">How it works in detail</a> · <a href="/overview/use-cases">Everything Talk can do</a></p>
+
+{{ rule(n.v, "What we found testing the models") }}{% set n.v = n.v + 1 %}
+<div class="cols three">
+  <section class="card"><p class="eyebrow">Answers cut off</p><h3>5 of 8 checks, then none</h3><p class="small">The language model was stopping mid-answer. We gave it room to finish, and no answer is cut off now.</p></section>
+  <section class="card"><p class="eyebrow">Voice speed</p><h3>2.2 times faster</h3><p class="small">Speech was made at about 35 tokens a second. A fixed-size cache doubled it, so replies reach the caller sooner.</p></section>
+  <section class="card"><p class="eyebrow">Clear speech</p><h3>31% to 96%</h3><p class="small">We tested every voice by having the speech recogniser read it back. A Nigerian voice from Spitch lifted the words understood from 31% to 96%.</p></section>
+</div>
+<p class="caption">Every fault we hit, what we changed and the measured effect, are in <a href="/overview/findings">the full record</a>. It also covers Yoruba, which Talk understands end to end.</p>
+
+{{ rule(n.v, "Test it by phone") }}{% set n.v = n.v + 1 %}
+<section class="card" id="test" aria-labelledby="test-title">
+  <p class="eyebrow">Call Talk from any phone</p>
+  {% if s.hub_test_number %}<p style="font-size:clamp(28px,6vw,56px);font-weight:600;letter-spacing:-1px;margin:var(--space-3) 0"><a href="tel:{{ s.hub_test_number|replace(' ', '') }}" style="color:inherit;text-decoration:none">{{ s.hub_test_number }}</a></p>{% endif %}
+  <h3 id="test-title">Live calls run on our own GPU, started for your session</h3>
+  <ol class="small">
+    <li>Email us the time you want to test{% if s.hub_contact_email %}: <a href="mailto:{{ s.hub_contact_email }}">{{ s.hub_contact_email }}</a>{% endif %}. Say how many people will call.</li>
+    <li>We start the server and reply when it is ready. Allow about 20 minutes.</li>
+    <li>{% if s.hub_test_number %}Call <b>{{ s.hub_test_number }}</b> from any phone.{% else %}We send you the number, and you call it from any phone.{% endif %} Talk answers in English, and it follows you into Yoruba.</li>
+  </ol>
+  <p class="eyebrow" style="margin-top:var(--space-4)">What to say</p>
+  <ol class="small">
+    <li>"My name is …" when Talk asks who is calling.</li>
+    <li>"What do you have in the store?" Talk lists the products the shop sells.</li>
+    <li>"I want two bags of NPK." Talk adds them and gives the total.</li>
+    <li>"What fertiliser should I use for my maize?" Talk speaks the shop owner's written advice.</li>
+    <li>"That is all." Give a delivery address, then say "yes" to the read-back.</li>
+  </ol>
+  <p class="eyebrow" style="margin-top:var(--space-4)">What happens next</p>
+  <ul class="small">
+    <li>The order is placed. Talk reads the account number to pay into aloud, twice, and sends it as a text message too.</li>
+    <li>The call appears on the <a href="/demo">live demo page</a> a few seconds later, with what Talk heard and what it answered.</li>
+    <li>The shop owner sees the order in the shop portal.</li>
+  </ul>
+  <p class="eyebrow" style="margin-top:var(--space-4)">For the best result</p>
+  <ul class="small">
+    <li>Use a quiet place, hold the phone close, and say one short sentence at a time.</li>
+    <li>Wait for Talk to finish. The first answer can take a few seconds while the models warm up.</li>
+  </ul>
+  {% if s.hub_cost_note %}<p class="small">{{ s.hub_cost_note }}</p>{% endif %}
+  <p class="small">The live demo page, the saved calls and the shop owner's portal are always open and need no GPU.</p>
+</section>
+
+{{ rule(n.v, "Where this goes") }}{% set n.v = n.v + 1 %}
+<section class="card">
+  <p class="eyebrow">Your own number becomes your AI agent</p>
+  <h3>Call your own number, and your agent answers</h3>
+  <p class="small">Today, calling your own number gives a busy tone. We are working with network providers so that the same call reaches your personal Talk agent: "Send 5k to my brother", "Where is my parcel?", "Help me buy light token". Your phone number becomes your way into every digital service.</p>
+  {% if deck %}<a class="btn ghost" href="/overview/deck">See the pitch deck</a>{% elif s.hub_deck_url %}<a class="btn ghost" href="{{ s.hub_deck_url }}" rel="noopener">See the pitch deck</a>{% endif %}
+</section>
+
+{{ rule(n.v, "Partner with us") }}{% set n.v = n.v + 1 %}
+<div class="cols three" id="partner">
+  <section class="card"><p class="eyebrow">Service providers</p><h3>Reach customers who have no app</h3><p class="small">Connect a clinic, a courier, a shop, a farm supplier or a public office once, and callers can reach it by voice. No code changes on our side.</p></section>
+  <section class="card"><p class="eyebrow">Network providers</p><h3>Put Talk on every number</h3><p class="small">Help us turn each SIM into a personal AI access point, with identity confirmed by the network.</p></section>
+</div>
+{% if s.hub_contact_email %}<p class="caption">Write to <a href="mailto:{{ s.hub_contact_email }}">{{ s.hub_contact_email }}</a>.</p>{% endif %}
+{% endblock %}

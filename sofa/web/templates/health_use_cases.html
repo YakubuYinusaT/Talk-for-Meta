@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% from "_ui.html" import rule %}
+{% block title %}What Talk can do{% endblock %}
+
+{% block hero %}
+<section class="hero" aria-labelledby="u-title">
+  <div class="frame">
+    <p class="eyebrow">Use cases</p>
+    <h1 id="u-title">From "where do I go?" to a booked visit.</h1>
+    <p class="lede">A caller asks in plain words and Talk does the rest: finds the care, lays out the choices, books, and follows up.</p>
+  </div>
+</section>
+{% endblock %}
+
+{% block body %}
+
+{{ rule(1, "What a caller can do") }}
+<div class="cols three">
+  <section class="card"><p class="eyebrow">Live</p><h3>Find care near me</h3><p class="small">The nearest clinic, hospital or pharmacy for a need such as antenatal care, immunisation or a malaria test, with opening hours, waiting time and fee.</p><p class="caption">A caller says: "Find a clinic near Surulere for antenatal care."</p></section>
+  <section class="card"><p class="eyebrow">Live</p><h3>Book and cancel</h3><p class="small">Talk offers the real options, books the clinic's own appointment book on a clear yes, and cancels with whichever provider holds the visit.</p><p class="caption">A caller says: "Book an appointment in Yaba."</p></section>
+  <section class="card"><p class="eyebrow">Live</p><h3>Is my medicine in stock?</h3><p class="small">Which pharmacies have it, what a pack costs, and whether it needs a prescription.</p><p class="caption">A caller says: "Do you have amoxicillin near Ikeja?"</p></section>
+  <section class="card"><p class="eyebrow">Live</p><h3>Ask the cancer centre</h3><p class="small">Basic questions answered from the centre's own patient guide: what to bring, how a treatment day works, who to call. A warning sign is always answered first and exactly as written.</p><p class="caption">A caller says: "What should I bring to my first visit?"</p></section>
+  <section class="card"><p class="eyebrow">Live</p><h3>Reminders and follow-up</h3><p class="small">A reminder the day before. After the visit, a thank-you to the patient who came, and an offer to rebook to the one who did not.</p><p class="caption">A caller hears: "We missed you. Call to book a new time."</p></section>
+  <section class="card"><p class="eyebrow">Live</p><h3>Emergencies</h3><p class="small">Words like "not breathing" get the emergency number straight away, then the nearest emergency care.</p><p class="caption">A caller says: "He is not breathing."</p></section>
+  <section class="card"><p class="eyebrow">Next</p><h3>Order from a photo</h3><p class="small">A prescription or a drug label, sent through a link by text, read by Talk and approved by the pharmacist.</p></section>
+  <section class="card"><p class="eyebrow">Next</p><h3>Repeat medicines</h3><p class="small">Reordered from the patient's own pharmacist before they run out, behind consent and a PIN.</p></section>
+  <section class="card"><p class="eyebrow">Next</p><h3>Antenatal plan</h3><p class="small">Visits and supplements on schedule, with reminders, and texts that never name the programme.</p></section>
+</div>
+
+{{ rule(2, "Three calls") }}
+<div class="cols three">
+  <section class="card"><p class="eyebrow">Choosing a clinic</p><p class="small"><b>Caller:</b> Book an appointment in Surulere.<br><b>Talk:</b> I found three places near Surulere. The first is a private clinic, less than a kilometre away, about 40 minutes of waiting and 8,000 naira. The second is a state health centre, about 100 minutes of waiting and 500 naira. Which one would you like?<br><b>Caller:</b> The cheaper one.<br><b>Talk:</b> I can book you there tomorrow at 8 in the morning. Shall I book it?<br><b>Caller:</b> Yes please.<br><b>Talk:</b> Done. Your booking code is K K S T. I have also texted you the details.</p></section>
+  <section class="card"><p class="eyebrow">A question for the care team</p><p class="small"><b>Caller:</b> What should I do if I have a fever during chemotherapy?<br><b>Talk:</b> Contact the centre straight away, or come to the emergency unit, if you have a high temperature or shivering, bleeding that will not stop, trouble breathing, or vomiting that does not stop. In an emergency call 112.</p></section>
+  <section class="card"><p class="eyebrow">The text after a visit</p><p class="small"><b>Day before:</b> Reminder: your appointment at the Ikeja care centre is tomorrow at 8 in the morning. Please arrive 15 minutes early.<br><b>After, if the patient came:</b> Thank you for coming. If you have questions about your visit, call this number any time.<br><b>After, if not:</b> We missed you. To book a new time, call this number and say book an appointment.</p></section>
+</div>
+<p class="caption">Services marked Live run today on simulated providers. Texts name a place by a discreet name, never by what is treated there.</p>
+{% endblock %}

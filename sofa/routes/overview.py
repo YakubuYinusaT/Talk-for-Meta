@@ -1,0 +1,230 @@
+"""The overview pages (/overview): what Talk is, how it works, what it can do, and what testing the models showed.
+
+Public and read-only. It holds no customer data and no passwords. The things that differ from one deployment to the next (who to email, the number to
+call, the videos, the pitch deck, a note about what live testing costs) come from settings, and a block with nothing set is simply left out.
+"""
+
+import html
+import re
+from pathlib import Path
+
+from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi.responses import FileResponse
+
+from ..web import ui
+from .pages import templates
+
+router = APIRouter(prefix="/overview")
+
+ROOT = Path(__file__).resolve().parent.parent.parent
+
+# sector, what Talk provides, status, a thing a caller might say
+SECTORS = [
+    ("Banking and payments", "The bank you already use: send money, pay bills, buy airtime, check a balance.", "Live", "Send 5k to my brother."),
+    ("Commerce", "Shops and dealers: prices, orders and payment in one call.", "Live", "I want two bags of NPK."),
+    ("Information", "Answers to everyday questions, in your own language.", "Live", "How much is maize this week?"),
+    ("Agriculture", "Farm inputs and trusted advice written by dealers and experts, from fertiliser use to planting time.", "Live", "When should I put fertiliser on my maize?"),
+    ("Logistics", "Track parcels and book delivery and transport.", "Soon", "Where is my parcel?"),
+    ("Health", "Medical help, or the nearest clinic and pharmacy.", "Soon", "Nearest clinic, abeg."),
+    ("Utilities", "Light token, recharge, data and bills.", "Soon", "Help me buy light token."),
+    ("Government", "Guidance on a driver's licence, a national ID or a permit, and what you need for each.", "Soon", "How do I renew my driver's licence?"),
+    ("Emergency services", "Help when it matters most.", "Later", "Abeg, I need help now."),
+]
+
+
+def enabled(request: Request) -> None:
+    """These pages describe shopping and search, so a build that has neither does not serve them."""
+    s = request.app.state.svc.settings
+    if not s.overview_enabled or ui.profile(s) == "demobank":
+        raise HTTPException(404)
+
+
+def video_embed(url: str) -> dict:
+    """How the page shows a video address: 'file' (a video file it plays itself), 'youtube' (embedded), 'link' (a button to open it) or '' (nothing set)."""
+    if not url:
+        return {"kind": "", "src": ""}
+    if re.search(r"\.(mp4|webm|mov)(\?.*)?$", url, re.I):
+        return {"kind": "file", "src": url}
+    m = re.match(r"https?://(?:www\.|m\.)?(?:youtube\.com/(?:watch\?(?:.*&)?v=|embed/|shorts/)|youtu\.be/)([\w-]{6,20})", url)
+    if m:
+        return {"kind": "youtube", "src": f"https://www.youtube-nocookie.com/embed/{m.group(1)}"}
+    return {"kind": "link", "src": url}
+
+
+def inline(text: str) -> str:
+    text = html.escape(text, quote=False)
+    text = re.sub(r"`([^`]+)`", r"<code>\1</code>", text)
+    return re.sub(r"\*\*([^*]+)\*\*", r"<b>\1</b>", text)
+
+
+def markdown_to_html(md: str) -> str:
+    """Just enough Markdown for the model log: headings, paragraphs, numbered lists and tables, with **bold** and `code`."""
+    out, lines, i = [], md.replace("\r\n", "\n").split("\n"), 0
+    while i < len(lines):
+        line = lines[i]
+        if not line.strip():
+            i += 1
+        elif line.startswith("### "):
+            out.append(f"<h3>{inline(line[4:])}</h3>")
+            i += 1
+        elif line.startswith("## "):
+            out.append(f"<h2>{inline(line[3:])}</h2>")
+            i += 1
+        elif line.startswith("# "):
+            i += 1  # the page has its own title
+        elif line.startswith("|"):
+            rows = []
+            while i < len(lines) and lines[i].startswith("|"):
+                rows.append([c.strip() for c in lines[i].strip().strip("|").split("|")])
+                i += 1
+            head, body = rows[0], [r for r in rows[2:]]
+            th = "".join(f'<th scope="col">{inline(c)}</th>' for c in head)
+            trs = "".join("<tr>" + "".join(f'<td data-label="{html.escape(head[k] if k < len(head) else "", quote=True)}"><span class="cell">{inline(c)}</span></td>' for k, c in enumerate(r)) + "</tr>" for r in body)
+            out.append(f'<div class="tablewrap"><table class="responsive"><thead><tr>{th}</tr></thead><tbody>{trs}</tbody></table></div>')
+        elif re.match(r"\d+\. ", line):
+            items = []
+            while i < len(lines) and re.match(r"\d+\. ", lines[i]):
+                items.append(re.sub(r"^\d+\. ", "", lines[i]))
+                i += 1
+            out.append("<ol>" + "".join(f"<li>{inline(t)}</li>" for t in items) + "</ol>")
+        else:
+            para = []
+            while i < len(lines) and lines[i].strip() and not lines[i].startswith(("#", "|")) and not re.match(r"\d+\. ", lines[i]):
+                para.append(lines[i])
+                i += 1
+            out.append(f"<p>{inline(' '.join(para))}</p>")
+    return "\n".join(out)
+
+
+def providers_for(request: Request) -> list[dict]:
+    """The simulated provider systems of the health build: who runs each, what it offers and where its front desk is."""
+    if not health_build(request):
+        return []
+    from ..health import data
+
+    offers = {"state-phc": "Health centres and general hospitals. Low fees, longer queues, and emergency departments.",
+              "eko-care": "A private clinic group. Higher fees and much shorter queues.",
+              "everwell": "A pharmacy chain. Medicines, prices and what is in stock.",
+              "onc-centre": "A cancer centre that gives every patient a fixed time, answers questions from its own patient guide, and follows up after each visit."}
+    kinds = {"state-phc": "State", "eko-care": "Private", "everwell": "Pharmacy", "onc-centre": "Pilot partner"}
+    return [{"slug": slug, "name": n.name, "kind": kinds[slug], "offers": offers[slug], "places": len(n.facilities), "desk": f"/synthetic/{slug}/"} for slug, n in data.NETWORKS.items()]
+
+
+def deck_titles(settings, count: int) -> list[str]:
+    """One line per slide from titles.txt in the deck folder, used as the slide's description for screen readers; 'Slide n' where a line is missing."""
+    path = ui.deck_dir(settings) / "titles.txt"
+    lines = [l.strip() for l in path.read_text(encoding="utf-8").splitlines() if l.strip()] if path.is_file() else []
+    return [lines[i] if i < len(lines) else f"Slide {i + 1}" for i in range(count)]
+
+
+DEMO_FILES = ("demo.mp4", "demo.webm")
+
+
+def demo_video_url(settings) -> str:
+    """Where the demo video is: the address in the settings if there is one, otherwise a file named demo.mp4 (or demo.webm) the team put in the overview folder
+    on the server, so publishing the video is one file copy and the page that holds it (/overview/video) starts playing it at once."""
+    if settings.hub_demo_video_url:
+        return settings.hub_demo_video_url
+    folder = Path(settings.storage_dir).resolve() / "overview"
+    return next((f"/overview/files/{name}" for name in DEMO_FILES if (folder / name).is_file()), "")
+
+
+def demo_sidecar_url(settings, demo_url: str, ext: str) -> str:
+    """A file kept beside a demo video in the overview folder, with the same name and another ending: the caption track (demo.vtt) or the picture
+    shown before play (demo.jpg) of demo.mp4. Used only when it is there. A video given as an address elsewhere carries its own."""
+    prefix = "/overview/files/"
+    if not demo_url.startswith(prefix):
+        return ""
+    name = f"{demo_url[len(prefix):].rsplit('.', 1)[0]}.{ext}"
+    return f"{prefix}{name}" if (Path(settings.storage_dir).resolve() / "overview" / name).is_file() else ""
+
+
+def health_build(request: Request) -> bool:
+    return ui.profile(request.app.state.svc.settings) == "health"
+
+
+def context(request: Request, **extra) -> dict:
+    s = request.app.state.svc.settings
+    deck = len(ui.deck_slides(s))
+    demo_url = demo_video_url(s)
+    side = ui.profile(s)
+    return {"request": request, "brand": "Talk", "footer_kind": "health" if side == "health" else "shop", "side": side, "home_url": "/overview", "active": "", "s": s, "deck": deck,
+            "story": video_embed(s.hub_story_video_url), "demo": video_embed(demo_url), "demo_captions": demo_sidecar_url(s, demo_url, "vtt"),
+            "demo_poster": demo_sidecar_url(s, demo_url, "jpg"),
+            "has_watch": bool(s.hub_story_video_url or demo_url or s.hub_audio_url or deck), "demo_page": s.demo_page_enabled, **extra}
+
+
+@router.get("")
+def overview(request: Request, _=Depends(enabled)):
+    return templates.TemplateResponse(request, "health_home.html" if health_build(request) else "overview.html", context(request, providers=providers_for(request)))
+
+
+@router.get("/video")
+def video(request: Request, _=Depends(enabled)):
+    """The page that holds the demo video: the address to give anyone who asks for it. It plays the video once there is one, and until then points to the rest of the evidence."""
+    return templates.TemplateResponse(request, "overview_video.html", context(request))
+
+
+@router.get("/technology")
+def technology(request: Request, _=Depends(enabled)):
+    return templates.TemplateResponse(request, "health_how.html" if health_build(request) else "overview_technology.html", context(request))
+
+
+@router.get("/use-cases")
+def use_cases(request: Request, _=Depends(enabled)):
+    return templates.TemplateResponse(request, "health_use_cases.html" if health_build(request) else "overview_use_cases.html", context(request, sectors=SECTORS))
+
+
+@router.get("/providers")
+def providers(request: Request, _=Depends(enabled)):
+    """The connected providers of the health build, with a link to each one's own front-desk page."""
+    if not health_build(request):
+        raise HTTPException(404)
+    return templates.TemplateResponse(request, "health_providers.html", context(request, providers=providers_for(request)))
+
+
+@router.get("/findings")
+def findings(request: Request, _=Depends(enabled)):
+    if health_build(request):
+        raise HTTPException(404)    # the health build tells its own story: the model-testing record belongs to the shopping build
+    path = ROOT / "docs" / "model_log.md"
+    body = markdown_to_html(path.read_text(encoding="utf-8")) if path.exists() else ""
+    return templates.TemplateResponse(request, "overview_findings.html", context(request, body=body))
+
+
+NO_COPY = {"Cache-Control": "private, no-store", "Content-Disposition": "inline", "X-Robots-Tag": "noindex, nofollow"}
+
+
+@router.get("/deck")
+def deck(request: Request, _=Depends(enabled)):
+    """The pitch deck as a slide viewer: pictures only, nothing to download."""
+    s = request.app.state.svc.settings
+    slides = ui.deck_slides(s)
+    if not slides:
+        raise HTTPException(404)
+    return templates.TemplateResponse(request, "overview_deck.html", context(request, urls=[f"/overview/deck/{n}" for n in slides], titles=deck_titles(s, len(slides))),
+                                      headers={"X-Robots-Tag": NO_COPY["X-Robots-Tag"]})
+
+
+@router.get("/deck/{name}")
+def deck_slide(name: str, request: Request, _=Depends(enabled)):
+    """One slide picture. The browser asks for it as an image inside the viewer; a slide address opened on its own in a tab is refused, and the
+    answer says not to keep a copy. Anyone can still take a screenshot, but no editable file or full-quality original is ever sent."""
+    path = ui.deck_dir(request.app.state.svc.settings) / name
+    if not ui.DECK_SLIDE.fullmatch(name) or not path.is_file() or request.headers.get("sec-fetch-dest") == "document":
+        raise HTTPException(404)
+    return FileResponse(path, media_type="image/jpeg", headers=NO_COPY)
+
+
+FILE_TYPES = {"pdf": "application/pdf", "mp3": "audio/mpeg", "m4a": "audio/mp4", "wav": "audio/wav", "mp4": "video/mp4", "webm": "video/webm",
+              "vtt": "text/vtt", "png": "image/png", "jpg": "image/jpeg", "jpeg": "image/jpeg"}
+
+
+@router.get("/files/{name}")
+def files(name: str, request: Request, _=Depends(enabled)):
+    """The pitch deck, the audio explainer, a video or a picture the team has put in the overview folder (storage/overview) on the server. Nothing else is served."""
+    ext = name.rsplit(".", 1)[-1].lower() if "." in name else ""
+    path = Path(request.app.state.svc.settings.storage_dir).resolve() / "overview" / Path(name).name
+    if Path(name).name != name or ext not in FILE_TYPES or not path.is_file():
+        raise HTTPException(404)
+    return FileResponse(path, media_type=FILE_TYPES[ext])
